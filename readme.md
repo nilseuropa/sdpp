@@ -92,7 +92,7 @@ X1       SUB-D DB25     F25D
 
 ****
 
-## Device Driver
+## MS-DOS Device Driver
 Original device driver is written in 1994 by **Dan Marks** and it is based on TU58 by **Robert Armstrong**. Foolproof MMCv3/SDv1/SDv2 control module from Chan Fat FS has been added by [profdc9](https://forum.vcfed.org/index.php?threads/ms-dos-driver-for-an-sd-card-connected-via-a-parallel-port.41516/) and posted on Vintage Computer Federation forum in 2014.
 
 The driver is made available under the GNU General Public License version 2 and incorporates modified code from ELM Chan Fat FS: http://elm-chan.org/fsw/ff/00index_e.html.
@@ -103,7 +103,56 @@ If you would like to compile the driver from source you'll need **Borland C++ 3.
 ### Binary
 :floppy_disk: [Click here](driver/SD.SYS) to download the latest pre-compiled version of `SD.SYS`
 
-### Usage
+****
+
+## How to use it
+
+* Create <=32MB partition(s) on a uSD card
+* Format to FAT16 for best results
+* Find out the port base of your parallel port
+* Make sure that you are powering the adapter correctly
+* Install the [driver](driver/SD.SYS) :arrow_up: on DOS and enjoy. *(see configuration below)*
+
+#### Prepare the card on Linux
+1. Open a terminal
+2. Find your block device with `lsblk`
+3. `sudo umount /dev/<device_partition>` -- unmount if mounted
+4. Partition with `sudo fdisk /dev/<dev_name>` -- or use *gparted*
+  * `p` lists, `d` deletes, `n` for new partition
+  * new partition --> `p` for primary
+  * enter last sector `+32M`
+  * `t` to change partition type to FAT16 (`L` to list avaiable formats )
+  * `w` to write changes to partition table
+5. Format `sudo mkdosfs -F 16 /dev/<dev_name>`
+
+
+#### Prepare the card on Windows
+
+1. Open a command line and start `diskpart`
+2. `list disk` -- find the disk number of your card
+3. `select disk #` -- select your sd card
+4. `list part` -- look for existing partitions
+5. `select part #` -- select the partition to work with
+6. `delete part #` -- to get rid of anything that is not FAT16
+7. `create part primary size=32` -- create a 32MB partition
+8. `exit` -- leave diskpart
+9. `format X: /FS:FAT /Q` -- format partition to FAT16 (replace X)
+
+[Source](https://aesmit.org/2020/05/24/format-sd-card-fat16-on-windows-10/)
+
+#### Prepare the card on Mac
+1. Open Terminal (Applications > Utilities)
+2. `hdiutil create -size 32m -fs "MS-DOS FAT16" -volname "MSDOS32MB" mydisk.dmg` -- create a blank 32MB FAT16 disk image
+3. `hdiutil attach mydisk.dmg` -- mount image
+4. Copy your files
+5. `hdiutil detach /Volumes/MSDOS32MB` -- unmout image
+6. `hdiutil convert mydisk.dmg -format UDTO -o mydisk.iso` -- convert to raw format (mydisk.iso.cdr)
+7. Use `diskutil list` to find your physical media
+8. Unmount it if mounted `diskutil unmountDisk /dev/disk#`
+9. `sudo dd if=mydisk.iso.cdr of=/dev/rdisk2 bs=1m` -- write your image to the partition
+10. `diskutil eject /dev/disk#` -- eject card
+
+### DOS
 Put the following line in your `config.sys` file in order to install and load the driver:
 
 `DEVICE=SD.SYS /p=<partition #> /b=<port base index>`
@@ -118,6 +167,6 @@ Put the following line in your `config.sys` file in order to install and load th
      Default: 0x378
 ```
 #### Notes
-You can have multiple copies of the driver loaded if there are multiple partitions on your SD card you want to use simultaneously. For best results, format your partitions on your SD card to FAT16 and less than 32MB of size.
+You can have multiple copies of the driver loaded if there are multiple partitions on your SD card you want to use simultaneously.
 
 ****
