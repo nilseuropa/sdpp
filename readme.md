@@ -1,13 +1,51 @@
-# SD Card to Parallel Port Adapter and MS-DOS Driver
+# SD Card to Parallel Port Adapter(s) and MS-DOS Driver
 
-"A long forgotten solution that gets upgraded every decade or so. [ 1994 - 2014 - **2024** ]"
+"A long forgotten solution that gets updated every decade or so. [ 1994 - 2014 - **2024** ]"
+*It's either the update rate is doubling - and the next update will come in 2029 - or it is coming in every year that ends with a four...* Anyway, I wanted to have a single repository to contain all information to keep this neat solution afloat. This is it.
 
 ![](doc/teaser.png)
 
-## SD Card Adapter
+## Parallel port power
+Current version of the MS-DOS driver supports [powering the SD card](https://www.transkommunikation.ch/dateien/schaltungen/diverse_schaltungen/computer_circuits/Get%20Power%20From%20Pc%20Parallel%20Port.pdf) via the parallel port. A modern micro SD card [takes around 25mA](
+https://goughlui.com/2021/02/27/experiment-microsd-card-power-consumption-spi-performance/) of current on 3.3V in average. There are five data channels that are utilized as power outputs:
+
+| Adapter | DB-25 Pin | Parallel Port |
+| -------- | ------- | ------- |
+| VCC | 5 | Data 3 |
+| VCC | 6 | Data 4 |
+| VCC | 7 | Data 5 |
+| VCC | 8 | Data 6 |
+| VCC | 9 | Data 7 |
+
+*IEEE 1284 Level II interface drivers must be able to source 14 mA current (at least +2.4V
+voltage) and also sink 14 mA current (output voltage lower than 0.4V). The output impedance
+in normal operation range is defined to be 50+/-5 ohms.*
+
+|Port type|Normal|UM82C11-C|IEEE 1284|
+| -------- | -------- | ------- | ------- |
+Data output (>2.4V)| 2.6 mA| 2 mA| 14 mA|
+Data line sink (<0.4V)| 24 mA| 24 mA| 14 mA|
+Control output (>2.4 V)| 0.5 mA| 1.5 mA| ?|
+Signal lines (short circuit)| 1 mA| ?| ?|
+Control line sink (<0.4V)| 7 mA| 7 mA| 14 mA|
+
+:warning: **WARNING, using this feature can potentially harm your port driver if it is not IEEE1284 compliant!**
+
+As this standard came alive in 1994, rule of thumb is that most computers built after it are probably compliant, and everything before that is a mystery that you have to solve for the sake of your machine.
+The power feature is totally optional, and potentially dangerous if your machine doesn't support it.
+
+# Hardware options
+
+1. Hook up an SD breakout board to a DB25 and be done with it *( see Wiring )*
+2. Etch my simple adapter board design for the breakout module
+3. Build my SD Drive design *( contributions are welcome )*
+
+## SD Breakout board
 In principle any SD card connector breakout board can be used that has 3.3/5V level shifters and a voltage regulator - like this one:
 
 ![](doc/adapter.png)
+
+:warning: **Do not use breakout boards without level shifters! You will most likely damage your card.**
 
 ### Wiring
 | SD Adapter | Hint | DB-25 Pin | Parallel Port |
@@ -21,42 +59,31 @@ In principle any SD card connector breakout board can be used that has 3.3/5V le
 | **Optional** |  | |
 | CD |Card detect| 11 | BUSY|
 
-:warning: **Do not use breakout boards without level shifters! You will most likely damage your card.**
+## Breakout Adapter
+
+### Schematic diagram
+Disregard the barrier diodes in case you want to build a fool-proof circuit.
+![](doc/module_schema.png)
+
+### Etch it yourself at home board
+This is an easy to fabricate adapter board for the micro SD card connector breakout module depicted above. It is available through at least 5 vendors. *( The one I have came from Reichelt. )*
+
+![](doc/module.png)
+
+**Double check that your port is IEEE1284 compliant.**
+The circuit also provides an auxiliary power input through barrel jack connector. In case you are unsure or your port is unable to handle the load **DO NOT POPULATE** the barrier diodes!
+
+## SD Drive *( the fancy )*
+Or a more integrated version, designed to power the SD card through an IEEE1284 compliant port.
 
 ### Schematic diagram
 
-The following circuit has the benefit to [power the SD card](https://www.transkommunikation.ch/dateien/schaltungen/diverse_schaltungen/computer_circuits/Get%20Power%20From%20Pc%20Parallel%20Port.pdf) via the parallel port. A modern micro SD card [takes around 25mA](
-https://goughlui.com/2021/02/27/experiment-microsd-card-power-consumption-spi-performance/) of current on 3.3V in average. There are five data channels that are utilized as power outputs:
-
-| Adapter | DB-25 Pin | Parallel Port |
-| -------- | ------- | ------- |
-| VCC | 5 | Data 3 |
-| VCC | 6 | Data 4 |
-| VCC | 7 | Data 5 |
-| VCC | 8 | Data 6 |
-| VCC | 9 | Data 7 |
-
 Each channel is fed through a super low forward drop *(0.31V)* barrier diode to protect the port in case the push-pull outputs are operated by another software than the MS-DOS driver in this repository. The sum of the channels is buffered by a 100uF capacitor, and the supply voltage for the SD card is provided by a linear regulator. With the correct port type, this provides around 100mA on the 3.3V rail that can handle the microsecond long spikes that occur during flash write cycles.
-
-#### Parallel port power
-*IEEE 1284 Level II interface drivers must be able to source 14 mA current (at least +2.4V
-voltage) and also sink 14 mA current (output voltage lower than 0.4V). The output impedance
-in normal operation range is defined to be 50+/-5 ohms.*
-
-|Port type|Normal|UM82C11-C|IEEE 1284|
-| -------- | -------- | ------- | ------- |
-Data output (>2.4V)| 2.6 mA| 2 mA| 14 mA|
-Data line sink (<0.4V)| 24 mA| 24 mA| 14 mA|
-Control output (>2.4 V)| 0.5 mA| 1.5 mA| ?|
-Signal lines (short circuit)| 1 mA| ?| ?|
-Control line sink (<0.4V)| 7 mA| 7 mA| 14 mA|
-
-:warning: **WARNING, THIS CAN POTENTIALLY HARM YOUR PORT DRIVER !**
 
 ![](doc/schematic.png)
 
 
-### Printed circuit board layout
+### Board layout
 
 **Double check that your port is IEEE1284 compliant.**
 The circuit also provides an auxiliary power input through a USB-C connector. In case you are unsure or your port is unable to handle the load **DO NOT POPULATE** the barrier diodes!
@@ -88,11 +115,11 @@ U2       3.3V           SOT23-5            V_REG_AP2112K-3.3V
 X1       SUB-D DB25     F25D
 ```
 
-:exclamation: The circuit in this form is yet to be tested.
+:exclamation: This printed circuit board is yet to be tested. If you have built one, please let me know.
 
 ****
 
-## MS-DOS Device Driver
+# MS-DOS Device Driver
 Original device driver is written in 1994 by **Dan Marks** and it is based on TU58 by **Robert Armstrong**. Foolproof MMCv3/SDv1/SDv2 control module from Chan Fat FS has been added by [profdc9](https://forum.vcfed.org/index.php?threads/ms-dos-driver-for-an-sd-card-connected-via-a-parallel-port.41516/) and posted on Vintage Computer Federation forum in 2014.
 
 The driver is made available under the GNU General Public License version 2 and incorporates modified code from ELM Chan Fat FS: http://elm-chan.org/fsw/ff/00index_e.html.
@@ -100,8 +127,11 @@ The driver is made available under the GNU General Public License version 2 and 
 #### Compilation
 If you would like to compile the driver from source you'll need **Borland C++ 3.1** with the included **Turbo Assembler 3.1** installed on your DOS machine.
 
-### Binary
-:floppy_disk: [Click here](driver/SD.SYS) to download the latest pre-compiled version of `SD.SYS`
+### Binaries
+
+:floppy_disk: [Download](driver/SD.SYS) the latest pre-compiled version of `SD.SYS`
+
+:floppy_disk: [Download](driver/NILQUAD.SYS) a modified version compiled for Nilquader's NC100 SD adapter `NILQUAD.SYS` *(MISO on BUSY)*
 
 ****
 
